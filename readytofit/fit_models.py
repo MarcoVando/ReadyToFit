@@ -151,3 +151,117 @@ def fit_model(
             print(f"{name}: {value}")
 
     return result
+
+
+def find_best_fit(
+    x: np.ndarray,
+    y: np.ndarray,
+    peaks: List[Dict],
+    p0: Optional[List[Dict]] = None,
+    bounds: Optional[List[Dict]] = None,
+    n_iterations: int = 10,
+    n_best_results: int = 3,
+    random_scale: float = 0.1,
+    debug: bool = False
+) -> list:
+    """
+    Fit the model and return the best fit result.
+    Currently, this function simply calls fit_model, but it can be extended
+    to perform multiple fits with different initial guesses or models and select the best one.
+    """
+    best_res = [100]    
+    if p0 is None:
+        if debug:
+            print("No initial guess provided. Using peak detection for initial parameter estimation...")
+        peaks_estimated = estimate_initial_parameters(x, y, peaks)
+        p0 = peaks_estimated
+    else:
+        if debug:
+            print("Using provided initial guess for fitting.")
+    p0_flat = flatten_params(peaks, p0)
+    
+    for i in range(n_iterations):
+        print(f"Iteration {i+1}/{n_iterations}...")
+        if i>0:
+           p0_flat = perturb_p0(p0_flat, random_scale, bounds, peaks)  # Perturb initial guess for next iteration
+        
+        p0 = unflatten_params(peaks, p0_flat)  # Ensure p0 is structured for the first iteration
+        result = fit_model(x, y, peaks, p0, bounds, debug)
+        if result['rmse'] < best_res[-1]:   #if current RMSE is better than worst in best_res
+            print(f"\tCurrent RMSE: {result['rmse']:.4f} - Adding to best results")
+            if len(best_res) == n_best_results:
+                best_res.pop()
+            best_res.append(result['rmse'])
+            best_res.sort(reverse=True)   # Sort by RMSE
+        else:
+            print(f"\tCurrent RMSE: {result['rmse']:.4f} - Not better than worst of best RMSE: {best_res[-1]:.4f}")
+            continue
+    return best_res
+
+def perturb_p0(p0: list, scale: float = 0.1, bounds: Optional[List[Dict]] = None, 
+               peaks: Optional[List[Dict]] = None, debug: bool = False) -> list:
+    """
+    Perturb the initial guess parameters by a random factor within a specified scale.
+    The perturbation respects the parameter bounds to ensure the perturbed values
+    remain within valid ranges.
+    
+    This can help escape local minima in optimization while maintaining valid parameter values.
+    
+    Parameters
+    ----------
+    p0 : list
+        Flat list of initial parameter values.
+    scale : float
+        Scale of the perturbation (as a fraction of the parameter value).
+    bounds : list of dict, optional
+        Structured bounds (one dict per peak, mapping param_name -> (lower, upper)).
+        If provided, perturbed values will be clamped to stay within these bounds.
+    peaks : list of dict, optional
+        Peak definitions (required if bounds is provided, to determine parameter order).
+    debug : bool
+        If True, print debug information.
+        
+    Returns
+    -------
+    perturbed_p0 : list
+        Perturbed parameter values, clamped to bounds if bounds were provided.
+    """
+    # Flatten bounds to match the flat p0 format
+    lower_bounds = None
+    upper_bounds = None
+    
+    if bounds is not None and peaks is not None:
+        flattened = flatten_bounds(peaks, bounds)
+        if flattened is not None:
+            lower_bounds = np.array(flattened[0])
+            upper_bounds = np.array(flattened[1])
+    
+    perturbed_p0 = []
+    for i, param in enumerate(p0):
+        if debug:
+            print(f"Original p0[{i}]: {param}")
+        if param is None:
+            perturbed_p0.append(None)
+        else:
+            # Calculate perturbation
+            perturbation = np.random.uniform(-scale, scale) * abs(param)
+            new_val = param + perturbation
+            
+            # Clamp to bounds if available
+            if lower_bounds is not None and upper_bounds is not None:
+                if i < len(lower_bounds):
+                    lb = lower_bounds[i]
+                    ub = upper_bounds[i]
+                    # Only clamp if bounds are finite
+                    if np.isfinite(lb) and np.isfinite(ub):
+                        new_val = max(lb, min(ub, new_val))
+                    elif np.isfinite(lb):
+                        new_val = max(lb, new_val)
+                    elif np.isfinite(ub):
+                        new_val = min(ub, new_val)
+            
+            perturbed_p0.append(new_val)
+            if debug:
+                print(f"Perturbed p0[{i}]: {perturbed_p0[-1]} (perturbation: {perturbation:.4f})")
+    
+    return perturbed_p0

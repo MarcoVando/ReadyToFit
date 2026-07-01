@@ -45,6 +45,7 @@ def voigt(x, A, mu, sigma, gamma):
     """
     return A * voigt_profile(x - mu, sigma, gamma)
 
+
 def asym_voigt(x, A, mu, sigma_L, sigma_R, gamma):
     """Asymmetric Voigt function with different left/right Gaussian widths.
     Parameters:
