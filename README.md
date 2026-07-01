@@ -2,6 +2,12 @@
 
 A flexible and modular Python toolkit for multi-peak curve fitting, parameter management, visualization, and area analysis using scipy.optimize.curve_fit.
 
+## ⭐ Author Notes
+
+I had to dig into scipy too many times over the years without using it on a daily basis. I decided that I needed a more handy peak-fitting tool (based on scipy) that would speed up my workflow.
+This project is designed as a modular research-grade fitting system, not a black-box tool.
+Each component can be reused independently in scientific workflows.
+
 This package is designed to handle arbitrary numbers of peaks with different models (Gaussian, Voigt, Asymmetric, Skewed), including support for fixed parameters (e.g., fixed peak centers μ).
 
 ## 🚀 Features
@@ -306,11 +312,6 @@ Inspect total fit, individual peaks, residuals, and peak areas independently.
 numpy  
 scipy  
 matplotlib
-
-## ⭐ Author Notes
-
-This project is designed as a modular research-grade fitting system, not a black-box tool.
-Each component can be reused independently in scientific workflows.
 
 ### To add new peak types
 
