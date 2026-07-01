@@ -102,15 +102,20 @@ def fit_model(
     final_bounds = flatten_bounds(peaks, final_bounds_structured)
 
     # ---- Perform fit ----
-    popt, _ = curve_fit(
-        model_fun,
-        x,
-        y,
-        p0=final_p0,
-        bounds=final_bounds,
-        maxfev=10000  # Increase max function evaluations for complex fits
-    )
-
+    try:
+        popt, _ = curve_fit(
+            model_fun,
+            x,
+            y,
+            p0=final_p0,
+            bounds=final_bounds,
+            maxfev=10000  # Increase max function evaluations for complex fits
+        )
+    except RuntimeError:
+        if debug:
+            print("Warning: curve_fit failed to converge. Using initial guess as fallback.")
+        popt = final_p0  # fallback: use initial guess
+    
     # ---- Compute fitted curves ----
     total_fit = model_fun(x, *popt)
 
